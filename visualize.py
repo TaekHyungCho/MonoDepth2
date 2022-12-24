@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+from fileinput import filename
 #matplotlib inline
 
 import os
@@ -12,7 +13,8 @@ from torchvision import transforms
 
 import networks
 from utils import download_model_if_doesnt_exist
-
+import time
+from tqdm import tqdm
 model_name = "mono_1024x320"
 
 download_model_if_doesnt_exist(model_name)
@@ -33,14 +35,38 @@ depth_decoder.load_state_dict(loaded_dict)
 encoder.eval()
 depth_decoder.eval();
 
-image_path = "data/clear/"
-save_path = "data/depth/"
-img_clear_list = sorted(glob.glob(image_path+"*"))
-print(img_clear_list)
-for img in img_clear_list:
+img_clear_list =[]
+image_path = "/data1/cth/"
+with open('/data1/cth/nuscenes/val_img.txt','r') as f:
+    lines = f.readlines()
+    for line in lines:
+        line = line.strip()
+        #data_path = image_path + line
+        data_path = line
+        img_clear_list.append(data_path)
+
+save_path_list = ['nuscenes/depth/CAM_FRONT/','nuscenes/depth/CAM_FRONT_RIGHT/','nuscenes/depth/CAM_FRONT_LEFT/',
+                    'nuscenes/depth/CAM_BACK/','nuscenes/depth/CAM_BACK_LEFT/','nuscenes/depth/CAM_BACK_RIGHT/']
+#img_clear_list = sorted(glob.glob(image_path+"*"))
+
+for img in tqdm(img_clear_list):
+    file_name = str(img).split('/')[-1]
+
+    if '__CAM_FRONT__' in file_name:
+        save_path = image_path + save_path_list[0]
+    elif '__CAM_FRONT_RIGHT__' in file_name:
+        save_path = image_path + save_path_list[1]
+    elif '__CAM_FRONT_LEFT__' in file_name:
+        save_path = image_path + save_path_list[2]
+    elif '__CAM_BACK__' in file_name:
+        save_path = image_path + save_path_list[3]
+    elif '__CAM_BACK_LEFT__' in file_name:
+        save_path = image_path + save_path_list[4]
+    elif '__CAM_BACK_RIGHT__' in file_name:
+        save_path = image_path + save_path_list[5]
+
     input_image = pil.open(img).convert('RGB')
     original_width, original_height = input_image.size
-
     feed_height = loaded_dict_enc['height']
     feed_width = loaded_dict_enc['width']
     input_image_resized = input_image.resize((feed_width, feed_height), pil.LANCZOS)
@@ -60,11 +86,10 @@ for img in img_clear_list:
     disp_resized_np = disp_resized.squeeze().cpu().numpy()
     vmax = np.percentile(disp_resized_np, 95)
     depth_img = pil.fromarray(disp_resized_np)
-    save_name = str(img).split('/')[-1].replace(".jpg",".tif")
-    print(save_name)
+    #save_name = str(img).split('/')[-1].replace(".jpg",".tif")
+    save_name = file_name.replace(".jpg",".tif")
     save_ = save_path + save_name
     depth_img.save(save_)
-
 '''
 plt.figure(figsize=(10, 10))
 plt.subplot(211)
